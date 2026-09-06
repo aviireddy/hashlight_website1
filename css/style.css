@@ -148,7 +148,7 @@ section{ position:relative; }
 }
 
 .logo{ font-family:var(--display); font-size:22px; letter-spacing:.01em; text-transform:uppercase; display:flex; align-items:center; gap:10px; }
-.logo-mark{ width:28px; height:28px; object-fit:contain; display:block; flex-shrink:0; }
+.logo-mark{ width:36px; height:36px; object-fit:contain; display:block; flex-shrink:0; filter:brightness(0) invert(1); }
 
 .nav-sep{ color:var(--ink-faint); font-size:14.7px; line-height:1; opacity:.6; flex-shrink:0; }
 
@@ -180,6 +180,14 @@ section{ position:relative; }
 
 /* mobile nav */
 @media (max-width:920px){
+  /* .site-nav normally centers itself with transform:translateX(-50%), but a
+     transform on an ancestor becomes the containing block for any
+     position:fixed descendant — which made the fixed, inset:0 .nav-links
+     menu below size/position itself against the small nav pill instead of
+     the full screen, leaving a sliver of it visible even when "closed".
+     Centering via left/right+auto-margin instead avoids creating that
+     containing block, so the closed menu is fully off-screen. */
+  .site-nav{ left:0; right:0; transform:none; margin-inline:auto; }
   .nav-links{
     position:fixed; inset:0; background:var(--bg); flex-direction:column; justify-content:center; align-items:flex-start;
     padding:var(--pad); gap:26px; transform:translateX(100%); transition:transform .5s var(--ease); z-index:55;
@@ -308,6 +316,7 @@ section{ position:relative; }
    ========================================================================== */
 .services{ padding-block:clamp(80px,10vw,140px); }
 .section-head{ display:flex; justify-content:space-between; align-items:flex-end; gap:30px; margin-bottom:56px; flex-wrap:wrap; }
+.section-head > div{ display:flex; flex-direction:column; gap:16px; align-items:flex-start; }
 .services-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:1px; background:var(--line); border:1px solid var(--line); border-radius:20px; overflow:hidden; }
 @media (max-width:980px){ .services-grid{ grid-template-columns:repeat(2,1fr); } }
 @media (max-width:560px){ .services-grid{ grid-template-columns:1fr; } }
@@ -352,6 +361,9 @@ section{ position:relative; }
    Footer
    ========================================================================== */
 .site-footer{ border-top:1px solid var(--line); padding-block:24px 34px; }
+/* on mobile the dial anchors off the bottom edge and pokes up ~80-100px,
+   which otherwise sits right on top of the copyright line below */
+@media (max-width:920px){ .site-footer{ padding-bottom:120px; } }
 
 /* floating WhatsApp button — lives in the footer's markup (so it survives
    the page-panel split, since footer is never hidden) but is fixed to the
@@ -369,7 +381,7 @@ section{ position:relative; }
 
 /* rolling platforms banner — reuses the hero ticker's marquee animation */
 .footer-platforms{
-  overflow:hidden; padding-bottom:16px; margin-bottom:20px; border-bottom:1px solid var(--line);
+  overflow:hidden; padding-bottom:16px; margin-bottom:48px; border-bottom:1px solid var(--line);
   width:100vw; margin-left:calc(50% - 50vw); margin-right:calc(50% - 50vw);
 }
 .footer-platforms-track{ display:flex; width:max-content; animation:tick 85.5s linear infinite; }

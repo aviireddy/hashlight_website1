@@ -480,55 +480,19 @@ document.addEventListener('DOMContentLoaded', () => {
       return Math.atan2(clientY - cy, clientX - cx) * 180 / Math.PI;
     };
 
-    /* ---------- live single-step page preview, tracking the drag ----------
-       As the dial turns from the active number toward a neighbour, that
-       neighbouring panel is temporarily pinned over the page (position:fixed)
-       and slid into view in direct proportion to how far the drag has gone —
-       so the page visibly scrolls toward the next section instead of only
-       reacting once you let go. Releasing before the drag reaches the full
-       step springs it back; reaching the neighbour's own position before
-       release commits it, with no veil needed since the slide itself is
-       the transition. Spinning further than one step in a single drag
-       falls back to the existing
-       instant veil-swap via goTo, since a multi-panel slide isn't this. */
-    let dragStartTheta = 0;
-    let previewIndex = null;
-    let previewDir = 0;
-
-    const setPreview = (panel, pct) => {
-      panel.style.position = 'fixed';
-      panel.style.inset = '0';
-      panel.style.zIndex = '43';
-      panel.style.overflow = 'hidden';
-      panel.style.display = 'block';
-      panel.style.transition = 'none';
-      panel.style.transform = `translateY(${pct}%)`;
-    };
-    const clearPreview = (panel) => {
-      panel.style.position = '';
-      panel.style.inset = '';
-      panel.style.zIndex = '';
-      panel.style.overflow = '';
-      panel.style.display = '';
-      panel.style.transition = '';
-      panel.style.transform = '';
-    };
-    const releasePreview = () => {
-      if (previewIndex === null) return;
-      clearPreview(pagePanels[previewIndex]);
-      previewIndex = null;
-    };
-
     face.addEventListener('pointerdown', (e) => {
       dragging = true;
       face.setPointerCapture(e.pointerId);
       lastAngle = angleAt(e.clientX, e.clientY);
-      dragStartTheta = theta;
-      releasePreview();
       ring.style.transition = 'none';
       holes.forEach(h => { h.style.transition = 'none'; });
     });
 
+    // only the dial's ring/numbers move during the drag itself — the page
+    // underneath stays fully visible and still until release, so pages never
+    // stack/overlap mid-drag. Releasing snaps to whichever number lands on
+    // the stop and commits via goTo, the same fade-to-black-then-reveal
+    // crossfade used by click/nav navigation, so both paths behave identically.
     face.addEventListener('pointermove', (e) => {
       if (!dragging) return;
       const a = angleAt(e.clientX, e.clientY);
@@ -537,25 +501,6 @@ document.addEventListener('DOMContentLoaded', () => {
       lastAngle = a;
       ring.style.transform = `rotate(${theta}deg)`;
       holes.forEach(h => { h.style.transform = `rotate(${-theta}deg)`; });
-
-      if (reduceMotion) return;
-      const stepDeg = 360 / N;
-      const delta = theta - dragStartTheta;
-      const dir = delta >= 0 ? 1 : -1;
-      const targetIdx = (activeIndex + dir + N) % N;
-      const frac = Math.max(0, Math.min(Math.abs(delta) / stepDeg, 1));
-
-      if (targetIdx !== previewIndex) {
-        releasePreview();
-        previewIndex = targetIdx;
-        previewDir = dir;
-      }
-      if (frac > 0) {
-        const restPct = previewDir === 1 ? 100 : -100;
-        setPreview(pagePanels[previewIndex], restPct * (1 - frac));
-      } else {
-        releasePreview();
-      }
     });
 
     const endDrag = () => {
@@ -567,39 +512,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const dist = Math.abs(shortestDiff(base + theta, pa));
         if (dist < bestDist) { bestDist = dist; bestI = i; }
       });
-
-      if (previewIndex !== null && bestI === previewIndex) {
-        // dragged all the way across — finish the slide into place, the
-        // motion itself is the transition, no veil needed
-        const panel = pagePanels[previewIndex];
-        const committedIndex = previewIndex;
-        panel.style.transition = 'transform .32s cubic-bezier(.22,.9,.36,1)';
-        panel.style.transform = 'translateY(0%)';
-        const finish = () => {
-          panel.removeEventListener('transitionend', finish);
-          clearPreview(panel);
-          window.scrollTo({ top: 0, left: 0 });
-          window.history.replaceState(null, null, `#${sections[committedIndex].id}`);
-          showPanel(committedIndex);
-          setActive(committedIndex);
-        };
-        panel.addEventListener('transitionend', finish, { once: true });
-        previewIndex = null;
-      } else if (previewIndex !== null) {
-        // released before crossing (or spun past the immediate neighbour) —
-        // spring the peeked panel back, and let goTo handle wherever the
-        // dial actually landed (a no-op if that's still the active page)
-        const panel = pagePanels[previewIndex];
-        const restPct = previewDir === 1 ? 100 : -100;
-        panel.style.transition = 'transform .28s cubic-bezier(.22,.9,.36,1)';
-        panel.style.transform = `translateY(${restPct}%)`;
-        const cleanup = () => { panel.removeEventListener('transitionend', cleanup); clearPreview(panel); };
-        panel.addEventListener('transitionend', cleanup, { once: true });
-        previewIndex = null;
-        goTo(bestI);
-      } else {
-        goTo(bestI);
-      }
+      goTo(bestI);
     };
     face.addEventListener('pointerup', endDrag);
     face.addEventListener('pointercancel', endDrag);
