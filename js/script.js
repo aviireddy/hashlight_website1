@@ -64,6 +64,35 @@ document.addEventListener('DOMContentLoaded', () => {
     }));
   }
 
+  /* ---------- mobile full-screen menu: detach from .site-nav below the
+     920px breakpoint ----------
+     .site-nav needs backdrop-filter for its glass look, but a backdrop-filter
+     (like a transform) on an ancestor becomes the containing block for any
+     position:fixed descendant — so the fixed, inset:0 mobile menu was
+     sizing/positioning itself against the small nav pill instead of the real
+     viewport, leaving a sliver of it (page numbers/links) visible even while
+     "closed". Moving the menu to sit right after .site-nav (only while
+     narrow; moved back into its original spot between the nav-seps for the
+     desktop inline layout) keeps it out of that containing block entirely. */
+  if (links && nav) {
+    const isMobileNav = () => window.matchMedia('(max-width:920px)').matches;
+    const navLinksHome = document.createComment('nav-links-home');
+    links.parentNode.insertBefore(navLinksHome, links);
+    let navLinksOut = false;
+    const placeNavLinks = () => {
+      const wantOut = isMobileNav();
+      if (wantOut === navLinksOut) return;
+      if (wantOut) {
+        nav.insertAdjacentElement('afterend', links);
+      } else {
+        navLinksHome.parentNode.insertBefore(links, navLinksHome.nextSibling);
+      }
+      navLinksOut = wantOut;
+    };
+    placeNavLinks();
+    window.addEventListener('resize', placeNavLinks);
+  }
+
   /* ---------- scroll reveal ---------- */
   const reveals = document.querySelectorAll('.reveal');
   if ('IntersectionObserver' in window && reveals.length) {
@@ -131,7 +160,9 @@ document.addEventListener('DOMContentLoaded', () => {
   if (reelVideo && reelPlay) {
     const toggle = () => { reelVideo.paused ? reelVideo.play() : reelVideo.pause(); };
     reelPlay.addEventListener('click', toggle);
-    reelVideo.addEventListener('click', toggle);
+    reelVideo.addEventListener('click', () => {
+      window.open('https://www.instagram.com/hashlight.me/', '_blank', 'noopener');
+    });
     reelVideo.addEventListener('play', () => reelPlay.classList.add('is-playing'));
     reelVideo.addEventListener('pause', () => reelPlay.classList.remove('is-playing'));
   }
